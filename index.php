@@ -4,7 +4,7 @@ define( '_DEBUG', 0 );
 
 header( 'Content-Type: text/plain' );
 
-include "kt/kactalk.php";
+include "kacTalk/kactalk.php";
 
 
 class testKTO extends ktObject
