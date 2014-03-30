@@ -60,9 +60,10 @@ class ktError extends Exception
 	const DIV_BY_ZERO	= 3011;
 	const IS_EMPTY		= 3012;
 	const CONSTANT		= 3013;
-	const UNKNOWN		= 3014;
+	const UNKNOWN		  = 3014;
+  const NOT_AVAILABLE = 3015;
 
-	const REGEX_COULDNT_SET_PATTERN = 3015;
+	const REGEX_COULDNT_SET_PATTERN = 3030;
 
 	const _MAX_ERROR_NO	= 3030;
 

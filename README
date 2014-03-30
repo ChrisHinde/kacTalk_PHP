@@ -1,0 +1,46 @@
+kacTalk_PHP
+===========
+          
+PHP library for kacTalk
+
+Disclaimer
+----------
+
+This library (and the whole kacTalk suite) is still in development.
+
+Right now the project contains a mix of new and (very)) old code, some of which is adopted from other languages!
+
+The PHP library is in need of some mayor rewrites (especially of the main class)
+to make it include all functionality etc (like scripting).
+  
+Features
+--------
+
+The idea behind kacTalk is to simplify API access.
+kacTalk is designed with ideas like DRY (Don't Repeat Yourself) and KISS.
+
+kacTalk is all about generalizing the usage of APIs and general communication
+between server and client.  
+
+Paired with the API is a scripting language.   
+
+Diagram
+-------
+
+                  Your Application
+                ( PHP / .NET / RUBY )
+                          |   
+                       kacTalk                  
+                          |
+            [TalkerChannel / Helper Class]
+             HTTPTalker      SerialTalker 
+             /                          \
+            V                            V
+      Ext. Service #1                Ext. Service #2
+     (HTTP / Web app)               (MicroController)
+  
+
+Examples
+--------
+
+Right now there's no real examples, but take a look in index.php for the dev setup.

@@ -12,11 +12,15 @@ class ktLib
 	static function bool2str( $bool )
 	{
 		return $bool ? 'true' : 'false';
-	}
+	}        
+  static function IsAssoc($arr)
+  {
+      return array_keys($arr) !== range(0, count($arr) - 1);
+  }
 
 	static function GetRoute( $path )
 	{
-		$ret = array();
+		$ret = array('format'=>'','member'=>'','object'=>'');
 
 		if (empty( $path )) {
 			$path = $_SERVER['PATH_INFO'];

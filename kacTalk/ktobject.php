@@ -47,8 +47,10 @@ class ktObject /*extends ArrayObject*/
 		if (!is_array( $this->_property_types )) {
 			return '';
 		}
-
-		return $this->_property_types[$property];
+    if ( array_key_exists( $property, $this->_property_types ) ) 
+		  return $this->_property_types[$property];
+    else
+      return '';
 	}
 
 	function getMethods()

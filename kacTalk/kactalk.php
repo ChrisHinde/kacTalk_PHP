@@ -33,7 +33,66 @@ class kacTalk
 		} else {
 			$this->_routeClass = $getRoute;
 		}
+    kacTalk::$_kt = $this; 
+    
+    $this->AddExtraParameters();
+    
+    $this->_returnPureValue = isset( $this->_extraParameters['pureValue'] )
+                                && ( $this->_extraParameters['pureValue'] == '1' );
 	}
+          
+  public function GetReturnPureValue()
+  {
+    return $this->_returnPureValue;
+  }
+  
+  public function AddExtraParameters()
+  {
+    $this->_extraParameters = array();
+    
+    foreach ( $_REQUEST as $k => $v ) {
+      $this->_extraParameters[$k] = $v;    
+    }
+  }
+  public function GetExtraParameters()
+  {
+    return $this->_extraParameters;
+  }
+  public function GetExtraParameter( $key )
+  {
+    return $this->_extraParameters[$key];
+  }
+  
+  public function SetAPIKey( $apiKey )
+  {
+    $this->_apiKey = $apiKey;
+  }
+  public function CheckAPIKey( $apiKey = '' )
+  {
+    if ( empty($this->_apiKey) )
+      return true;
+
+    if ( empty($apiKey) ) {
+      if ( isset( $_REQUEST['api_key'] ) )
+        $apiKey = $_REQUEST['api_key'];
+      elseif ( isset( $_REQUEST['apikey'] ) )
+        $apiKey = $_REQUEST['apikey'];
+      else
+        return false;
+    }                 
+    
+    return $this->_apiKey == $apiKey;    
+  }          
+  public function CheckAPIKeyOrDie( $apiKey = '', $msg = '' )
+  {
+    if ( empty($msg) )
+      $msg = 'The given API-key wasn\'t correct!';
+    
+    if ( $this->CheckAPIKey( $apiKey ) )
+      return true;
+    else
+      die($msg);
+  }
 
 	public function Register( &$object, $name = '' )
 	{
@@ -44,7 +103,29 @@ class kacTalk
 		}
 
 		if (empty( $name )) {
-			$name = $object->_object_name;
+      if ( is_object( $object ) )
+        $name = $object->_object_name;
+      else
+        $name = $object;
+		}
+
+		$this->_objects[$name] = $object;
+
+		return $name;
+	}
+	public function RegisterClass( $object, $name = '' )
+	{                                 
+		if (empty( $object )) { return false; }
+
+		if (!isset( $this->_objects )) {
+			$this->_objects = array();
+		}
+
+		if (empty( $name )) {
+      if ( is_object( $object ) )
+        $name = $object->_object_name;
+      else
+        $name = $object;
 		}
 
 		$this->_objects[$name] = $object;
@@ -53,12 +134,16 @@ class kacTalk
 	}
 	protected function GetObject( $name )
 	{
-		if (empty( $name ) || empty( $this->_objects )) {
+		if (empty( $name )) {
 			return null;
 		}
 
 		if (array_key_exists( $name, $this->_objects )) {
-			return $this->_objects[$name];
+			$obj = & $this->_objects[$name];
+      if ( is_string($obj) ) {
+        $obj = new $obj();
+      }
+      return $obj;
 		} else if (isset( $this->object ) && isset( $this->object->_object_name ) &&
 					( $this->object->_object_name == $name ) ) {
 			return $this->object;
@@ -66,6 +151,15 @@ class kacTalk
 			return null;
 		}
 	}
+  public function GetClassName( $class )
+  {
+  if ( is_numeric($class) ) throw new Exception('NO');
+    if (array_key_exists( $class, $this->_objects ) )
+      return $class;
+    else if ( ($c = array_search( $class, $this->_objects )) !== false ) {
+      return $c;
+    }  
+  }
 
 	public function Call( $host, $uri, $index = '', $protocol = kacTalk::_DEFAULT_PROT )
 	{
@@ -76,7 +170,8 @@ class kacTalk
 			default: {
 				throw new ktError( "Doesn't support the protocol#: {$protocol}",
 									"::Call",
-									$this );
+									$this,
+                  ktError::NOTIMP );
 			}
 		}
 	}
@@ -142,6 +237,8 @@ class kacTalk
 		if (empty( $path )) {
 		  if (isset( $_SERVER['PATH_INFO'] )) {
 			 $path = $_SERVER['PATH_INFO'];
+      } else if (isset( $_REQUEST['kuery'] )) {
+        $path = $_REQUEST['kuery'];
       }
 		}
 
@@ -166,6 +263,8 @@ class kacTalk
 			if ($this->path_arr['member'] == '_author') {
 				echo _KACTALK_AUTHOR . "\n";
 			} else if ($this->path_arr['member'] == 'objects') {
+        $this->CheckAPIKeyOrDie();
+
 				$objs = $this->GetAvaliableObjects();
 				/*$ret = ktExport::ExportStatic( $objs, $format,
 												true, true, 'objects' );*/
@@ -177,13 +276,20 @@ class kacTalk
 											'kt::Property' => 'objects' ), $format, ktExport::PROP_RESPONSE_WRAP /*$wrap_type */ );
 				return $objs;
 			} else if ($this->path_arr['member'] == '_info') {      
-				$objs = $this->GetAvaliableObjects();
-        
-        $info = array( 'objects' => $objs,
+//				$objs = $this->GetAvaliableObjects();
+                                                                                                                              
+        $info = array( // 'objects' => $objs,
                         'version' => _KACTALK_VERSION,
                         'full_version' => _KACTALK_LONG_NAME_VERSION,
+                        'version_f' => _KACTALK_VERSION_F,
                         'timestamp' => time(),
-                        'datetime' => date('c') );
+                        'datetime' => date('c'),
+                        'is_proxy' => $this->_isProxy );
+
+        if ( $this->CheckAPIKey() ) {
+          $objs = $this->GetAvaliableObjects();
+          $info['objects'] = $objs;
+        }
         
         $exp = new ktExport( $info );
         $ret = $exp->ExportArray( $info, $format, true, true );
@@ -191,7 +297,7 @@ class kacTalk
 				$ret = ktExport::ExportWrap( array( 'value' => $ret,
 											'kt::IS_PROPERTY' => true,
 											'kt::Property' => 'objects' ), $format, ktExport::PROP_RESPONSE_WRAP /*$wrap_type */ );
-				return $objs;
+				return $ret;
 			} else if ($this->path_arr['member'] == 'version') {
 				echo _KACTALK_VERSION . "\n";
 			} else if ($this->path_arr['member'] == 'full_version') {
@@ -201,6 +307,7 @@ class kacTalk
 			}
 			return true;
 		}
+    $this->CheckAPIKeyOrDie();
 
 		return $this->Parse( $this->path_arr, $format );
 	}
@@ -209,22 +316,33 @@ class kacTalk
 	{
 		if (!is_array( $path_arr )) { return null; }
 		$wrap_type = ktExport::_DEFAULT_WRAP;
-		$ret = null;
+		$ref = $ret = null;
+    $obj_n = $mem_n = $path_arr['object']; 
 
-		$obj = $this->GetObject( $path_arr['object'] );
+		$obj = $this->GetObject( $obj_n );
+    if ( is_null( $obj ) ) {
+      throw new ktError("UnavailableObject({$obj_n}) [The object '{$obj_n}' doesn't exist!]",'::Parse',$this,ktError::_404);
+    }
 
 		if (!empty( $path_arr['member'] )) {
 			$mem_n = $path_arr['member'];
+      
 			if (method_exists( $obj, $mem_n )) {
 				$ret = $this->RunMethod( $obj, $mem_n, $format, false, $path_arr );
 				$wrap_type = ktExport::METH_RESPONSE_WRAP;
 			} else if (property_exists( $obj, $mem_n )) {
+        try {
+          $ref = new ReflectionProperty(get_class($obj),$mem_n);
+        } catch ( ReflectionException $e ) {}        
+        if ( ( $ref != null ) && ! $ref->isPublic() )
+          throw new ktError("UnavailableProperty({$obj_n}::{$mem_n}) [The property '{$mem_n}' of '{$obj_n}' isn't publicily available!]",'::Parse',$this,ktError::NOT_AVAILABLE);
+        
 				$mem = $obj->{$mem_n};
 				$this->SetCurrentObject( $mem );
 				if (($mem instanceof ktObject) && isset( $path_arr['extra0'] )) {
 					$path_a = array( 'object' => get_class( $mem ),
 										'member' => $path_arr['extra0'] );
-					for ($i = 0; $i < count( $path_arr ) - 3; $i++) {
+					for ($i = 0; $i < count( $path_arr ) - 4; $i++) {
 						$path_a['extra' . $i] = $path_arr['extra' . ($i+1)];
 					}
 					$ret = $this->Parse( $path_a, $format );
@@ -249,6 +367,8 @@ class kacTalk
 		} else {
 			$reto = $obj;
 		}
+    
+    //if ( $reto == null )
 
 		if (empty( $ret )) {
 			$ret = ktExport::ExportStatic( $reto, $format, true, false, $mem_n );
@@ -278,20 +398,22 @@ class kacTalk
 			}
 		}
 
-		$ret = call_user_func_array( array( $obj, $meth ), $params );
-
+		$r = $ret = call_user_func_array( array( $obj, $meth ), $params );
+                                  
 		$obr = ob_get_contents();
 		ob_end_clean();
-
+     
 		if (!empty( $obr )) {
-			$obr = ktExport::ExportStatic( $obr, $format, true, false );
+			$obr = ktExport::ExportStatic( $obr, $format, true, true );
 		}
 		if ($ret !== null) {
-			$ret = ktExport::ExportStatic( $ret, $format, true, false );
-		}
+			$ret = ktExport::ExportStatic( $ret, $format, true, true );
+		}  
+    if (is_numeric($ret) || is_float($ret) )
+      $ret = $r;  
 
 		$ret = ktExport::ExportWrap( array( 'return' => $ret, 'output' => $obr, 'kt::IS_RETURN' => true,
-											'kt::Method' => $meth ),
+											'kt::Method' => $meth, 'kt::Type' => gettype($r) ),
 											$format, ktExport::METH_RESPONSE_WRAP, $return_export );
 
 		return $ret;
@@ -309,10 +431,10 @@ class kacTalk
 	}
 
 	public function GetRoute( $path = null )
-	{                                                     
+  {	                                     
 		if (version_compare( PHP_VERSION, '5.3.3', '>=' )) {
-			$c = $this->_routeClass;
-			//return $c::GetRoute( $path );
+			$c = $this->_routeClass;                
+			return $c::GetRoute( $path );
 		} else {
 			$o = new $this->_routeClass();
 			return $o->GetRoute( $path );
@@ -367,7 +489,15 @@ class kacTalk
 
 	protected $_objects = null;
 	protected $_routeClass = 'ktLib';
+  protected $_apiKey = '';
+  protected $_isProxy = false;
+  protected $_returnPureValue = false;
+  
+  protected $_extraParameters = array();
 
 	//protected $_current_object = null;
+  protected $object = null;
 	protected $_object_stack = array();
+  
+  public static $_kt = null;
 };

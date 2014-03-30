@@ -11,6 +11,7 @@ class testKTO extends ktObject
 {
 	public $slu = 42;
 	public $pi = 3.142;
+  public $string = 'Hello World!';
 	public $booleskt = true;
 	public $TT = null;
 
@@ -34,8 +35,9 @@ class testKTO extends ktObject
 		$n = 1;
 
 		foreach ($args as $a) {
+      if ( $n > 1 ) echo "\n";
 			$n_s = (($n > 9) ? '0' : ''). $n;
-			echo $n_s . ": {$a}\n";
+			echo $n_s . ": {$a}";
 
 			$n++;
 		}
@@ -71,9 +73,10 @@ class TestTwo extends ktObject
 
 try {
   $kt = new kacTalk();
+  $kt->SetAPIKey('658B8C89-BA37-42D6-8D02-7119A5FA613A');
 
   $kto = new testKTO();
-	$kt->Register( $kto, "kto" );
+	$kt->RegisterClass( 'testKTO', "kto" );
 	$my2 = new testTwo();
 	$my2->kt0 = $kto;
 	$kt->Register( $my2, "my2nd" );

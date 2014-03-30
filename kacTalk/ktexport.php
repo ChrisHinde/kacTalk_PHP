@@ -16,7 +16,7 @@ class ktExport
 	const XML_RPC		= 31424;			// -   -
 	const APACHE_CONF	= 31425;			// -   -
 	const INI			    = 31426;			// -   -
-	const OBJECT_KTS	= 31427;			// -   -
+	const OBJECT_KTO	= 31427;			// -   -
 	const OBJECT_PHP	= 31428;			// -   -
 	const OBJECT_JS		= ktExport::JSON;	// -   x (*)
 	const _VAR_DUMP    = 31429;				// 0   x
@@ -32,17 +32,22 @@ class ktExport
 	const _DEFAULT_WRAP			= ktExport::EXPORT_WRAP;
 
 	function __construct( &$object = null )
-	{
+	{                              
 		$this->_obj = &$object;
 	}
 
-	static function ExportStatic( $object, $format = ktExport::_DEFAULT,
+	static function ExportStatic( &$object, $format = ktExport::_DEFAULT,
 						$return_export = false, $no_outer = false,
 							$_name = '', $_type = '' )
 	{
 		$exp = new ktExport( $object );
-		return $exp->Export( $format, $return_export, $no_outer,
-								$_name, $_type );
+        
+    if ( is_object( $object ) )
+  		return $exp->Export( $format, $return_export, $no_outer,
+  								$_name, $_type );
+    else
+  		return $exp->ExportValue( $format, $return_export, $no_outer,
+  								$_name, $_type );
 	}
 
 	function Export( $format = ktExport::_DEFAULT, $return_export = false,
@@ -88,6 +93,11 @@ class ktExport
 											$_name, $_type );
 				break;
 			 }
+			case ktEXPORT::OBJECT_KTO: {
+				$ret = $this->ExportKTO( $return_export,
+											$_name, $_type );
+				break;
+			 }
 			case ktEXPORT::_VAR_DUMP: {
 				$ret = $this->ExportVarDump( $return_export );
 				break;
@@ -102,6 +112,68 @@ class ktExport
 		return $ret;
 	}
 
+	function ExportValue( $format = ktExport::_DEFAULT, $return_export = false,
+						$no_outer = false, $_name = '', $_type = '' )
+	{
+		$ret = '';                
+                 
+		if (_DEBUG) { var_dump( $format ); }
+
+		switch ($format) {
+			case ktEXPORT::KT_XML: {
+				$ret = $this->ExportValueKT_XML( $return_export, $no_outer,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::XML: {
+				$ret = $this->ExportValueXML( $return_export, $no_outer,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::XML_RPC: {
+				$ret = $this->ExportValueXML_RPC( $return_export, $no_outer,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::JSON: {
+				$ret = $this->ExportValueJSON( $return_export,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::JSONP: {
+				$ret = $this->ExportValueJSON( $return_export,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::INI: {
+				$ret = $this->ExportValueINI( $return_export,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::OBJECT_PHP: {
+				$ret = $this->ExportValuePHP( $return_export,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::OBJECT_KTO: {
+				$ret = $this->ExportValueKTO( $return_export,
+											$_name, $_type );
+				break;
+			 }
+			case ktEXPORT::_VAR_DUMP: {
+				$ret = $this->ExportVarDump( $return_export );
+				break;
+			 }
+			default: {
+				throw new ktError( "Doesn't support the format#: {$format}",
+									"::Export",
+									$this );
+			}
+		}
+                
+		return $ret;
+	}
+
 	function ExportJSONP( $return_export = false, $_name = '', $_type = '' )
 	{
     return $this->ExportJSON( $return_export, $_name, $_type );
@@ -110,7 +182,7 @@ class ktExport
 	function ExportJSON( $return_export = false, $_name = '', $_type = '' )
 	{
 		$return = "{\n";
-
+                              
 		if (isset( $this->_obj )) {
 			if (!(is_a( $this->_obj, 'ktObject' ) && is_subclass_of( $this->_obj, 'ktObject' ))) {
 				return $this->ExportValueJSON( $return_export,
@@ -120,48 +192,63 @@ class ktExport
 			$n = 0;
 			foreach ( $this->_obj->getProperties() as $propName => $value ) {
 				if ($propName[0] == '_')	continue;
-
-				if ($n > 0) $return .= ",\n";
-
+                                                                 
+			  if ($n > 0) $return = str_replace("#,#",',', $return) . "\n";				    
+    
 				//$value = &$this->_obj->{$propName};
 
 				if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
-					$return .= "\t'{$propName}': ";
+					$return .= "\t'{$propName}':\t";
 					if ($value == $this->_obj) {
 						$return .= 'this';
 					} else {
-						$return .= str_replace( "\n", "\n\t",
-							$value->Export( ktExport::JSON, true ) );
-				}
+            $o = $value->Export( ktExport::JSON, true );
+						$return .= str_replace( "\n", "\n\t", trim( $o ) );
+				  }
+          $return .= "#,#\t/* ktObject */";
 				} else if (is_array( $value )) {
-					$return .= "\t'{$propName}': ";
-					$return .= str_replace( "\n", "\n\t",
-							ktExport::ExportArray( $value, ktExport::JSON, true ) );
+					$return .= "\t'{$propName}':\t";
+          $arr = ktExport::ExportArray( $value, ktExport::JSON, true );
+					$return .= str_replace( "\n", "\n\t", trim( $arr ) );   
+          $return .= "#,#\t/* array */";
 				} else if (is_string( $value )) {
-					$return .= "\t'{$propName}': ";
-					$return .= "'" . addslashes( $value ) . "'";
+					$return .= "\t'{$propName}':\t";
+					$return .= "'" . str_replace('\\"', '"', addslashes( $value ) ) . "'";     
+          $return .= "#,#\t/* string */";
 				} else if (is_bool( $value )) {
-					$return .= "\t'{$propName}': ";
-					$return .= ktLib::bool2str( $value );
+					$return .= "\t'{$propName}':\t";
+					$return .= ktLib::bool2str( $value );      
+          $return .= "#,#\t/* bool */";                         
+  			} else if (is_float( $value )) {
+					$return .= "\t'{$propName}':\t{$value}";
+          $return .= "#,#\t/* float */";
+				} else if (is_numeric( $value )) {
+					$return .= "\t'{$propName}':\t{$value}";
+          $return .= "#,#\t/* integer */";
+				} else if (is_null( $value )) {                                       
+					$return .= "\t'{$propName}':\tnull";    
+          $return .= "#,#\t/* NULL */";
 				} else {
 					$return .= "\t'{$propName}': '{$value}'";
 				}
 
 				$n++;
-			}
-			$c = get_class( $this->_obj );
+			}                                                                         
+                                                          
+		  $c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 
 			foreach ( $this->_obj->getMethods() as $meth ) {
-				if ($n > 0) $return .= ",\n";
+			  if ($n > 0) $return = str_replace("#,#",',', $return) . "\n";			
 
 				$return .= "\t'{$meth}': function() {\n";
 				$return .= "\t\t/** <kto:functionCallDef function=\"{$c}::{$meth}\" /> **/\n";
 				$return .= "\t\tkacTalk.functionCall( '";
 				$return .= $c . "::{$meth}', ";
 				$return .= "arguments, this );\n";
-				$return .= "\t}";
+				$return .= "\t}#,#";
 			}
-		}
+		}  
+    $return = str_replace("#,#",'', $return);
 
 		$return .= "\n}\n";
 
@@ -175,13 +262,83 @@ class ktExport
   
   function ExportValueJSON( $return_export = false,
 								$name = '', $type = '' )
-	{
-		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ) ? 'ARRAY' : get_class( $this->_obj ) );
+	{       
+		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 		if (empty($c)) $c = gettype( $this->_obj );
 		$value = $this->_obj;
-
+                                   
 		$return = '';
-		$name_a = empty( $name ) ? '' : "'{$name}': ";
+		//$name_a = empty( $name ) ? '' : "'{$name}' = ";    
+    $name_a = ( empty( $name ) || kacTalk::$_kt->GetReturnPureValue() ) ? '' : "{$name} = ";       
+
+		if (!empty( $type )) {  
+			$return .= "\t";
+			if ($value === $this->_obj) {
+				$return .= 'this';
+			} else {
+				$return .= /*"\n\t\t" .*/ str_replace( "\n", "\n\t",
+						$this->TreatType( $value,
+											$type,
+											ktExport::JSON,
+											$propName ) );
+			}
+			//$return .= "";
+		} else if (is_a( $value, 'ktObject' ) || @is_subclass_of( $value, 'ktObject' )) { 
+			$return .= "\t{$name_a}{\n";
+      $return .= "\t\t_objectInfo: { 'type': 'ktObject', 'name': '{$_name}' },\n";
+			if ($value == $this->_obj) {
+				$return .= 'this';
+			} else {
+				$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+					trim( $value->Export( ktExport::JSON, true, true ) ) );
+				$return .= "\n\t";
+			}
+			$return .= "}";
+		} else if (is_array( $value )) {
+			$return .= "\t{$name_a}";
+			$return .= str_replace( "\n", "\n\t",
+					ktExport::ExportArray( $value, ktExport::JSON, true ) );
+		} else if (is_string( $value )) {
+			$return .= "\t{$name_a}'" . $value . "'";
+		} else if (is_bool( $value )) {
+			$return .= "\t{$name_a}";
+			$return .= ktLib::bool2str( $value );
+		} else if (is_float( $value ) || is_numeric( $value )) {
+			$return .= "\t{$name_a}{$value}";
+		} else if ($value == null) {
+			$return .= "\t{$name_a}null";
+		} else {
+			$cl = ktExport::LookUpClass( $value );
+			if (empty($cl)) $cl = gettype( $this->_obj );
+			$t = 'kto_custom:' . $cl;
+			$return .= "\t<kto:value {$name_a}type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
+		}
+
+    if ( kacTalk::$_kt->GetReturnPureValue() )
+      $return .= ';';
+    else
+      $return = trim( $return );   
+		//$return .= ($no_outer ? "\n" : "\n</kto:object>\n" );
+/*		if ($no_outer) {
+			$return = substr( $return, 1 );
+		}*/
+                
+		if ($return_export) {
+			return $return;
+		} else {
+			echo $return;
+			return true;
+		}
+  }
+  function ExportValueKTO( $return_export = false,
+								$name = '', $type = '' )
+	{       
+		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
+		if (empty($c)) $c = gettype( $this->_obj );
+		$value = $this->_obj;
+                                    
+		$return = '';
+    $name_a = ( empty( $name ) || kacTalk::$_kt->GetReturnPureValue() ) ? '' : "{$name} = ";     
 
 		if (!empty( $type )) {  
 			$return .= "\t";
@@ -206,33 +363,126 @@ class ktExport
 				$return .= "\n\t";
 			}
 			$return .= "</kto:value>";
-		} else if (is_array( $value )) {
-			$return .= "\t{$name_a}";
+		} else if (is_array( $value )) {     
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktList ";     
+			$return .= $name_a;     
 			$return .= str_replace( "\n", "\n\t",
-					ktExport::ExportArray( $value, ktExport::JSON, true ) );
-		} else if (is_string( $value )) {
-			$return .= "\t<kto:value {$name_a}type=\"string\">";
-			$return .= "<![CDATA[" . $value . "]]></kto:value>";
-		} else if (is_bool( $value )) {
-			$return .= "\t<kto:value {$name_a}type=\"bool\">";
-			$return .= ktLib::bool2str( $value ) . "</kto:value>";
-		} else if (is_float( $value )) {
-			$return .= "\t<kto:value {$name_a}type=\"float\">{$value}</kto:value>";
-		} else if (is_numeric( $value )) {
-			$return .= "\t<kto:value {$name_a}type=\"integer\">{$value}</kto:value>";
+					ktExport::ExportArray( $value, ktExport::OBJECT_KTO, true ) );
+		} else if (is_string( $value )) {     
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktString {$name_a}\"{$value}\"";
+      else
+        $return .= $value;
+		} else if (is_bool( $value )) {        
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktBool ";     
+			$return .= $name_a;
+			$return .= ktLib::bool2str( $value );
+		} else if (is_float( $value )) {     
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktFloat ";     
+			$return .= "{$name_a}{$value}";
+		} else if (is_numeric( $value )) {     
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktInt ";     
+			$return .= "{$name_a}{$value}";
 		} else if ($value == null) {
-			$return .= "\t<kto:null {$name_a}/>";
+			$return .= "\t{$name_a}:null";
 		} else {
-			$cl = get_class( $value );
+			$cl = ktExport::LookUpClass( $value );
 			if (empty($cl)) $cl = gettype( $this->_obj );
 			$t = 'kto_custom:' . $cl;
-			$return .= "\t<kto:value {$name_a}type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
-		}
+			$return .= "\t{$name_a}{$value}";
+		}        
+    if ( kacTalk::$_kt->GetReturnPureValue() )
+      $return .= ';';
 
 		//$return .= ($no_outer ? "\n" : "\n</kto:object>\n" );
-		if ($no_outer) {
+/*		if ($no_outer) {
 			$return = substr( $return, 1 );
+		}*/
+
+		if ($return_export) {
+			return $return;
+		} else {
+			echo $return;
+			return true;
 		}
+  }
+  function ExportValuePHP( $return_export = false,
+								$name = '', $type = '' )
+	{       
+		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
+		if (empty($c)) $c = gettype( $this->_obj );
+		$value = $this->_obj;
+
+		$return = '';
+		$name_a = empty( $name ) ? '' : "{$name} = ";
+
+		if (!empty( $type )) {  
+			$return .= "\t";
+			if ($value === $this->_obj) {
+				$return .= 'this';
+			} else {
+				$return .= /*"\n\t\t" .*/ str_replace( "\n", "\n\t",
+						$this->TreatType( $value,
+											$type,
+											ktExport::JSON,
+											$propName ) );
+			}
+			//$return .= "";
+		} else if (is_a( $value, 'ktObject' ) || @is_subclass_of( $value, 'ktObject' )) { 
+			$return .= "\t{$name_a}{\n";
+      $return .= "\t\t_objectInfo: { 'type': 'ktObject', 'name': '{$_name}' },\n";
+			if ($value == $this->_obj) {
+				$return .= 'this';
+			} else {
+				$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+					trim( $value->Export( ktExport::JSON, true, true ) ) );
+				$return .= "\n\t";
+			}
+			$return .= "</kto:value>";
+		} else if (is_array( $value )) {   
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\t";    
+			$return .= $name_a;      
+			$return .= str_replace( "\n", "\n\t",
+					ktExport::ExportArray( $value, ktExport::OBJECT_KTO, true ) );
+		} else if (is_string( $value )) { 
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\tktString {$name_a}\"{$value}\"";
+      else
+        $return .= $value;
+		} else if (is_bool( $value )) { 
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\t";     
+			$return .= $name_a;
+			$return .= ktLib::bool2str( $value );
+		} else if (is_float( $value )) {    
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\t";    
+			$return .= "{$name_a}{$value}";
+		} else if (is_numeric( $value )) {   
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\t";    
+			$return .= "{$name_a}{$value}";
+		} else if ($value == null) {   
+      if (kacTalk::$_kt->GetReturnPureValue() )
+        $return .= "\t";    
+			$return .= "{$name_a}NULL";
+		} else {
+			$cl = ktExport::LookUpClass( $value );
+			if (empty($cl)) $cl = gettype( $this->_obj );
+			$t = 'kto_custom:' . $cl;
+			$return .= "\t{$name_a}{$value}";
+		}
+    $return .= ';';
+
+		//$return .= ($no_outer ? "\n" : "\n</kto:object>\n" );
+/*		if ($no_outer) {
+			$return = substr( $return, 1 );
+		}*/
 
 		if ($return_export) {
 			return $return;
@@ -262,11 +512,12 @@ class ktExport
 
 	function ExportKT_XML( $return_export = false, $no_outer = false,
 							$_name = '', $_type = '' )
-	{
-		$c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ) ? 'ARRAY' : get_class( $this->_obj ) );
+	{ 
+		$c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 		$return = ($no_outer ? '' : "<kto:object name=\"{$c}\">\n" );
+    $name_a = '';
 
-		if (isset( $this->_obj )) {
+		if (isset( $this->_obj )) {         
 			if (!(is_a( $this->_obj, 'ktObject' ) && is_subclass_of( $this->_obj, 'ktObject' ))) {    
 				$return = $this->ExportValueKT_XML( $return_export,
 													true,
@@ -279,7 +530,7 @@ class ktExport
 					return true;
 				}
 			}
-
+                                          
 			$n = 0;
 			foreach ( $this->_obj->getProperties() as $propName => $value ) {
 				if ($propName[0] == '_')	continue;
@@ -332,7 +583,7 @@ class ktExport
 					}
 					$return .= "</kto:value>";
 				} else {
-					$t = 'kto_custom:' . get_class( $value );
+					$t = 'kto_custom:' . ktExport::LookUpClass( $value );
 					$return .= "\t<kto:value {$propName_a}type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
 				}
 
@@ -363,10 +614,12 @@ class ktExport
 	function ExportValueKT_XML( $return_export = false,
 								$no_outer = true,
 								$name = '', $type = '' )
-	{
-		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ) ? 'ARRAY' : get_class( $this->_obj ) );
-		if (empty($c)) $c = gettype( $this->_obj );
+	{                                                                                                                                                                            
+		$c = ($name != '' ? $name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
+//		if (empty($c)) $c = gettype( $this->_obj );
 		$value = $this->_obj;
+    /*$a = func_get_args();
+    var_dump($a);                     */
 
 		$return = ($no_outer ? '' : "<kto:object name=\"{$c}\">\n" );
 		$name_a = empty( $name ) ? '' : "name=\"{$name}\" ";
@@ -413,7 +666,7 @@ class ktExport
 		} else if ($value == null) {
 			$return .= "\t<kto:null {$name_a}/>";
 		} else {
-			$cl = get_class( $value );
+			$cl = ktExport::LookUpClass( $value );
 			if (empty($cl)) $cl = gettype( $this->_obj );
 			$t = 'kto_custom:' . $cl;
 			$return .= "\t<kto:value {$name_a}type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
@@ -425,14 +678,20 @@ class ktExport
 		}
 
 		return $return;
-	}
+	}               
+	function ExportValueXML( $return_export = false,
+								$no_outer = true,
+								$name = '', $type = '' )
+	{
+    return $this->ExportValueKT_XML( $return_export, $no_outer, $name, $type );                                               
+  }
 
 	function ExportXML_RPC( $return_export = false, $no_outer = false,
 							$_name = '', $_type = '' )
-	{
-		$c = get_class( $this->_obj );
+	{                                                                                                                                                                                                         
+		$c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 		$return = ($no_outer ? '' : "<struct>\n" );
-
+    
 		if (isset( $this->_obj )) {
 			$n = 0;
 			foreach ( $this->_obj->getProperties() as $propName => $value ) {
@@ -486,7 +745,7 @@ class ktExport
 				} else if (is_numeric( $value )) {
 					$return .= "\t\t<value><int>{$value}</int></value>";
 				} else {
-					$t = 'kto_custom:' . get_class( $value );	
+					$t = 'kto_custom:' . ktExport::LookUpClass( $value );	
 					$return .= "\t\t<value><{$t}><![CDATA[{$value}]]></{$t}></value>";
 				}
 
@@ -518,7 +777,8 @@ class ktExport
 	function ExportINI( $return_export = false, $_name = '',
 							$_type = '' )
 	{
-		$name	= ( empty($this->_obj->_name) ? $this->_obj->_object_name : $this->_obj->_name );
+	//	$name	= ( empty($this->_obj->_name) ? $this->_obj->_object_name : $this->_obj->_name );                                                                                                    
+		$name = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 		$return = "[{$name}]\n";
 
 		if (isset( $this->_obj )) {
@@ -580,8 +840,8 @@ class ktExport
 
 	function ExportPHP( $return_export = false, $_name = '',
 						$_type = '' )
-	{
-		$c = get_class( $this->_obj );
+	{                                                                                                    
+		$c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
 		$return = "class {$c} extends ktObject\n{\n";
 
 		if (isset( $this->_obj )) {
@@ -610,7 +870,7 @@ class ktExport
 					}
 					$return .= "; // {$type}";
 				} else if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
-					$return .= "\tpublic {$propName} = ";
+					$return .= "\tpublic \${$propName} = ";
 					if ($value == $this->_obj) {
 						$return .= 'null /* $this */';
 					} else {
@@ -620,26 +880,114 @@ class ktExport
 					}
 					$return .= "; // ktObject";
 				} else if (is_array( $value )) {
-					$return .= "\t{$propName} = ";
+					$return .= "\tpublic \${$propName} = ";
 					$return .= str_replace( "\n", "\n\t",
 							trim( ktExport::ExportArray( $value, ktExport::OBJECT_PHP, true ) ) ) . "; // array";
 				} else if (is_string( $value )) {
-					$return .= "\t{$propName} = ";
+					$return .= "\tpublic \${$propName} = ";
 					$return .= '"' . addslashes( $value ). '"; // string';
 				} else if (is_bool( $value )) {
-					$return .= "\t{$propName} = ";
+					$return .= "\tpublic \${$propName} = ";
 					$return .= ktLib::bool2str( $value ) . "; // bool";
 				} else if (is_float( $value )) {
-					$return .= "\t{$propName} = {$value}; // float";
+					$return .= "\tpublic \${$propName} = {$value}; // float";
 				} else if (is_numeric( $value )) {
-					$return .= "\t{$propName} = {$value}; // integer";
+					$return .= "\tpublic \${$propName} = {$value}; // integer";
+				} else if (is_null( $value )) {
+					$t = 'NULL'; //'kto_custom:' . ktExport::GetClass( $value );
+					$return .= "\tpublic \${$propName} = null; // {$t}";
 				} else {
-					$t = gettype( $value ); //'kto_custom:' . get_class( $value );
-					$return .= "\t{$propName} = \"" . addslashes( $value ) . "; // {$t}";
+					$t = gettype( $value ); //'kto_custom:' . ktExport::GetClass( $value );
+					$return .= "\tpublic \${$propName} = \"" . addslashes( $value ) . "\"; // {$t}";
 				}
 
 				$n++;
 			}
+      $return .= "\n";
+
+			foreach ( $this->_obj->getMethods() as $meth ) {
+				if ($n > 0) $return .= "\n";
+
+				$return .= "\tfunction {$meth}()\n\t{\n";
+				$return .= "\t\tkacTalk::functionCall( \"{$c}::{$meth}\" );\n";
+				$return .= "\t}";
+			}
+		}
+
+		$return .= "\n}\n";
+
+		if ($return_export) {
+			return $return;
+		} else {
+			echo $return;
+			return true;
+		}
+	}
+	function ExportKTO( $return_export = false, $_name = '',
+						$_type = '' )
+	{                                                                                                    
+		$c = ($_name != '' ? $_name : ( is_array( $this->_obj ) ? 'ARRAY' : ktExport::GetClass( $this->_obj ) ) );
+		$return = "class {$c}\n{\n";
+
+		if (isset( $this->_obj )) {
+			$n = 0;
+			foreach ( $this->_obj->getProperties() as $propName => $value ) {
+				if ($propName[0] == '_')	continue;
+
+				if ($n > 0) $return .= "\n";
+
+				//$value = &$this->_obj->{$propName};
+
+				$type = $this->_obj->getTypeOfProperty($propName);
+				if (!empty( $type )) {
+					$return .= "\tpublic {$propName} = ";
+					if ($value === $this->_obj) {
+						$return .= 'this';
+					} else {
+						$return .= /*"\n\t\t" .*/ str_replace( "\n", "\n\t",
+								$this->TreatType( $value,
+													$type,
+													ktExport::OBJECT_PHP,
+													$propName ) );
+						/*$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+							trim( $value->Export( ktExport::KT_XML, true, true ) ) );*/
+						//$return .= "\n\t";
+					}
+					$return .= "; // {$type}";
+				} else if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
+					$return .= "\tpublic ktObject {$propName} = ";
+					if ($value == $this->_obj) {
+						$return .= 'null /* $this */';
+					} else {
+						$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+							trim( $value->Export( ktExport::OBJECT_KTO, true, true ) ) );
+						$return .= "\n\t";
+					}
+					$return .= ";";
+				} else if (is_array( $value )) {
+					$return .= "\tpublic ktList {$propName} = ";
+					$return .= str_replace( "\n", "\n\t",
+							trim( ktExport::ExportArray( $value, ktExport::OBJECT_KTO, true ) ) ) . ";";
+				} else if (is_string( $value )) {
+					$return .= "\tpublic ktString {$propName} = ";
+					$return .= '"' . addslashes( $value ). '";';
+				} else if (is_bool( $value )) {
+					$return .= "\tpublic ktBool {$propName} = ";
+					$return .= ktLib::bool2str( $value ) . ";";
+				} else if (is_float( $value )) {
+					$return .= "\tpublic ktFloat {$propName} = {$value};";
+				} else if (is_numeric( $value )) {
+					$return .= "\tpublic ktInt {$propName} = {$value};";
+				} else if (is_null( $value )) {
+					$return .= "\tpublic {$propName} = :null;";
+				} else {
+					$t = gettype( $value ); //'kto_custom:' . ktExport::GetClass( $value );
+					$return .= "\tpublic {$t} {$propName} = \"" . addslashes( $value ) . "\";";
+				}
+
+				$n++;
+			}
+      $return .= "\n";
 
 			foreach ( $this->_obj->getMethods() as $meth ) {
 				if ($n > 0) $return .= "\n";
@@ -701,7 +1049,7 @@ class ktExport
 			 }
 			case ktEXPORT::JSON:
 			case ktEXPORT::JSONP: {
-        if ( $json_map ) {
+        if ( $json_map || ktLib::isAssoc($array) ) {
 				  $ret = $this->ExportArrayJSON_Mapped( $array, $return_export );
         } else {
 				  $ret = $this->ExportArrayJSON( $array, $return_export );
@@ -714,6 +1062,10 @@ class ktExport
 			 }
 			case ktEXPORT::OBJECT_PHP: {
 				$ret = $this->ExportArrayPHP( $array, $return_export );
+				break;
+			 }
+			case ktEXPORT::OBJECT_KTO: {
+				$ret = $this->ExportArrayKTO( $array, $return_export );
 				break;
 			 }
 			case ktEXPORT::_VAR_DUMP: {
@@ -746,21 +1098,34 @@ class ktExport
 
 		$n = 0;
 		foreach ( $array as $key => $value ) {
-
-			if ($n > 0) $return .= ",\n";
+			if ($n > 0) $return = str_replace("#,#",',', $return) . "\n";
 
 			//$value = &$this->_obj->{$propName};
 
 			if (is_array( $value )) {
-				$return .= "\t'{$key}': ";
+				$return .= "\t'{$key}':\t";
 				$return .= str_replace( "\n", "\n\t",
 							ktExport::ExportArray( $value, ktExport::JSON, true ) );
+        $return .= "#,#\t/* array */";
 			} else if (is_string( $value )) {
 				$return .= "\t'{$key}': ";
-				$return .= "'" . addslashes( $value ) . "'";
+				$return .= "'" . str_replace('\\"', '"', addslashes( $value ) ) . "'";
+        $return .= "#,#\t/* string */";
 			} else if (is_bool( $value )) {
 				$return .= "\t'{$key}': ";
 				$return .= ktLib::bool2str( $value );
+        $return .= "#,#\t/* bool */";
+			} else if (is_float( $value )) {
+				$return .= "\t'{$key}': ";
+				$return .= $value;
+        $return .= "#,#\t/* float */";
+			} else if (is_integer( $value )) {
+				$return .= "\t'{$key}': ";
+				$return .= $value;
+        $return .= "#,#\t/* integer */";     
+			} else if (is_null( $value )) {        
+				$return .= "\t'{$key}': null";   
+        $return .= "#,#\t/* NULL */";
 			} else if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
 				$return .= "\t'{$key}': ";
 				if ($value == $this->_obj) {
@@ -769,14 +1134,16 @@ class ktExport
 					$return .= str_replace( "\n", "\n\t",
 						$value->Export( ktExport::JSON, true ) );
 				}
+        $return .= "#,#\t/* ktObject */";
 			} else {
 				$return .= "\t'{$key}': {$value}";
 			}
 
 			$n++;
-		}
+		}   
+    $return = str_replace("#,#",'', $return);
 
-		$return .= "\n}\n";
+		$return .= "\n}";
 
 		if ($return_export) {
 			return $return;
@@ -790,7 +1157,7 @@ class ktExport
 		$return = "[\n";
 
 		if ((!is_array( $array )) || empty( $array )) {
-			$return = trim( $return ) . "]\n";           
+			$return = trim( $return ) . "]";           
   		if ($return_export) {
   			return $return;
   		} else {
@@ -801,8 +1168,7 @@ class ktExport
 
 		$n = 0;
 		foreach ( $array as $key => $value ) {
-
-			if ($n > 0) $return .= ",\n";
+			if ($n > 0) $return = str_replace("#,#",',', $return) . "\n";
 
 			//$value = &$this->_obj->{$propName};
       $return .= "\t";
@@ -813,22 +1179,94 @@ class ktExport
 				} else {
 					$return .= str_replace( "\n", "\n\t",
 						$value->Export( ktExport::JSON, true ) );
-				}
+				}                     
+        $return .= "#,#\t/* ktObject */";
 			} else if (is_array( $value )) {
 				$return .= str_replace( "\n", "\n\t",
 							ktExport::ExportArray( $value, ktExport::JSON, true ) );
+        $return .= "#,#\t/* array */";
 			} else if (is_string( $value )) {
 				$return .= "'" . addslashes( $value ) . "'";
+        $return .= "#,#\t/* string */";
 			} else if (is_bool( $value )) {
 				$return .= ktLib::bool2str( $value );
+        $return .= "#,#\t/* bool */";
+			} else if (is_numeric( $value )) {
+				$return .= $value;  
+        $return .= "#,#\t/* integer */";    
+			} else if (is_null( $value )) {        
+				$return .= "\tnull";   
+        $return .= "#,#\t/* NULL */";
 			} else {
 				$return .= "{$value}";
+				$cl = ktExport::LookUpClass( $value );
+				if (empty($cl)) $cl = gettype( $value );
+        $return .= "#,#\t/* {$cl} */";
+			}
+
+			$n++;
+		}
+    $return = str_replace("#,#",'', $return);
+
+		$return .= "\n]";
+
+		if ($return_export) {
+			return $return;
+		} else {
+			echo $return;
+			return true;
+		}
+	}               
+	function ExportArrayKTO( $array, $return_export = false )
+	{
+		$return = "(\n";
+
+		if ((!is_array( $array )) || empty( $array )) {
+			$return = trim( $return ) . ")\n";           
+  		if ($return_export) {
+  			return $return;
+  		} else {
+  			echo $return;
+  			return true;
+  		}
+		}
+    
+    $is_assoc = ktLib::IsAssoc($array);
+
+		$n = 0;
+		foreach ( $array as $key => $value ) {
+
+			if ($n > 0) $return .= ",\n";
+      
+      if ( $is_assoc )         
+        $return .= "\t{$key}: ";
+      else                      
+        $return .= "\t";
+
+			//$value = &$this->_obj->{$propName};
+
+			if (is_array( $value )) {
+				$return .= str_replace( "\n", "\n\t",
+							ktExport::ExportArray( $value, ktExport::JSON, true ) );
+			} else if (is_string( $value )) {
+				$return .= "'" . str_replace('\\"', '"', addslashes( $value ) ) . "'";
+			} else if (is_bool( $value )) {
+				$return .= ktLib::bool2str( $value );
+			} else if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
+				if ($value == $this->_obj) {
+					$return .= 'this';
+				} else {
+					$return .= str_replace( "\n", "\n\t",
+						$value->Export( ktExport::OBJECT_KTO, true ) );
+				}
+			} else {
+				$return .= " {$value}";
 			}
 
 			$n++;
 		}
 
-		$return .= "\n]\n";
+		$return .= "\n)\n";
 
 		if ($return_export) {
 			return $return;
@@ -881,7 +1319,7 @@ class ktExport
 				$noRet = true;
 				$return .= "\t<kto:null name=\"{$key}\" />";
 			} else {
-				$cl = get_class( $value );
+				$cl = ktExport::LookUpClass( $value );
 				if (empty($cl)) $cl = gettype( $this->_obj );
 				$t = 'kto_custom:' . $cl;
 				$return .= "\t<kto:value name=\"{$key}\" type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
@@ -1032,36 +1470,39 @@ class ktExport
 
 		if ((!is_array( $array )) || empty( $array )) {
 			return trim( $ret ) . ")\n";
-		}
-
+		}                
+    
+    $is_assoc = ktLib::IsAssoc($array);
+                                        
 		$n = 0;
 		foreach ( $array as $key => $value ) {
 
 			if ($n > 0) $return .= ",\n";
-
+                                          
+      
+      if ( $is_assoc )         
+        $return .= "\t'{$key}' => ";
+      else                      
+        $return .= "\t";
 			//$value = &$this->_obj->{$propName};
   
 			if (is_a( $value, 'ktObject' ) || is_subclass_of( $value, 'ktObject' )) {
-				$return .= "\t'{$key}' => ";
 				if ($value == $this->_obj) {
 					$return .= 'this';
 				} else {
 					$return .= str_replace( "\n", "\n\t",
 						trim( $value->Export( ktExport::OBJECT_PHP, true ) ) );
 				}
-				$return .= " /* object */";
+				$return .= "\t/* ktObject */";
 			} else if (is_array( $value )) {
-				$return .= "\t'{$key}' => ";
 				$return .= str_replace( "\n", "\n\t",
 							ktExport::ExportArray( $value, ktExport::OBJECT_PHP, true ) ) . " /* array */";
 			} else if (is_string( $value )) {
-				$return .= "\t'{$key}' => ";
-				$return .= "'" . addslashes( $value ) . "' /* string */";
+				$return .= "'" . addslashes( $value ) . "'\t/* string */";
 			} else if (is_bool( $value )) {
-				$return .= "\t'{$key}' => ";
-				$return .= ktLib::bool2str( $value ) . "' /* bool */";
+				$return .= ktLib::bool2str( $value ) . "'\t/* bool */";
 			} else {
-				$return .= "\t'{$key}' => {$value} /* " . gettype( $value ) . " */";
+				$return .= "{$value}\t/* " . gettype( $value ) . " */";
 			}
 
 			$n++;
@@ -1080,7 +1521,24 @@ class ktExport
 	public static function ExportWrap( $value, $format = ktExport::_DEFAULT,
 										$type = ktExport::_DEFAULT_WRAP, $return_export = false )
 	{
-		$ret = '';
+		$ret = ''; 
+		switch( $type ) {
+			case ktExport::EXPORT_WRAP:          
+		  	break;
+			case ktExport::METH_RESPONSE_WRAP:
+			case ktExport::RESPONSE_WRAP:                               
+    		/*$val = ktExport::ExportArrayKTO($value,true);                               
+        $val = trim( $val ) . "\n";*/            
+    		if (is_array( $value ) && ( kacTalk::$_kt->GetReturnPureValue() ) ) {
+    			$val = trim($value['return']);  
+    		}
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:              
+    		if (is_array( $value ) && ( kacTalk::$_kt->GetReturnPureValue() ) ) {
+    			$val = trim($value['value']);  
+    		}
+        break;
+		};     
 
 		switch ( $format ) {
 			case ktEXPORT::KT_XML: {
@@ -1111,6 +1569,10 @@ class ktExport
 				$ret = ktExport::ExportWrapPHP( $value, $type, $return_export );
 				break;
 			 }
+			case ktEXPORT::OBJECT_KTO: {
+				$ret = ktExport::ExportWrapKTO( $value, $type, $return_export );
+				break;
+			 }
 			default: {
 				throw new ktError( "Doesn't support the format#: {$format}",
 									"::ExportWrap",
@@ -1124,27 +1586,35 @@ class ktExport
 	public static function ExportWrapJSON( $value, $type = ktExport::_DEFAULT_WRAP,
 												$return_export = false )
 	{
-		$l = ''; $r = '';                     
-		if (is_array( $value )) {
-			$val = $value['value'];
-		} else {
-			$val = $value;
-		}
+		$l = ''; $r = '';        
 
 		switch( $type ) {
 			case ktExport::EXPORT_WRAP:
-				$l = "{\n";
-				$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
-				$r = "}";
+				//$l = "{\n";
+				//$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
+				//$r = "}";                     
 		  	break;
-			case ktExport::RESPONSE_WRAP:
 			case ktExport::METH_RESPONSE_WRAP:
-			case ktExport::PROP_RESPONSE_WRAP:                               
+			case ktExport::RESPONSE_WRAP:                               
+    		$val = ktExport::ExportArrayJSON_Mapped($value,true);                               
         $val = trim( $val ) . "\n";
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:              
+    		/*if (is_array( $value )) {
+    			$val = $value['value'];
+          $v = trim($val);
+          if ( isset($value['kt::Property']) && ( substr($v,-1) != ';' ) ) {
+            $l = $value['kt::Property'] . ' = ';
+            $r = ';';
+          }  
+    		} else {
+    			$val = $value;
+    		}                       */
+        $val = trim( $val );
         break;
 			default: {
 				throw new ktError( "Doesn't support the type#: {$type}",
-									"::ExportWrapKT_XML",
+									"::ExportWrapJSON",
 									$this );
 			}
 		};
@@ -1167,7 +1637,12 @@ class ktExport
 	public static function ExportWrapJSONP( $value, $type = ktExport::_DEFAULT_WRAP,
 												$return_export = false, $padding = '' )
 	{
-		$l = ''; $r = '';
+		$l = ''; $val = ''; $r = '';             
+		if (is_array( $value )) {
+			$val = isset($value['value']) ? $value['value'] : $value; // ( isset($value['return']) ? $value['return'] : $value );
+		} else {
+			$val = $value;
+		}
     
     if ( empty( $padding ) ) {
       if ( isset($_REQUEST['padding']) ) {
@@ -1179,28 +1654,60 @@ class ktExport
       }
     }
     $padding = trim($padding);
-
+                 
 		switch( $type ) {
-			case ktExport::EXPORT_WRAP:         
-				if (is_array( $value )) {
-					$val = $value['value'];
-				} else {
-					$val = $value;
-				}
+			case ktExport::EXPORT_WRAP:
+				//$l = "{\n";
+				//$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
+				//$r = "}";                     
+		  	break;
+			case ktExport::METH_RESPONSE_WRAP:
+			case ktExport::RESPONSE_WRAP:                               
+    		$val = ktExport::ExportArrayJSON_Mapped($value,true);                               
+        $val = trim( $val ) . "\n";
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:              
+    		/*if (is_array( $value )) {
+    			$val = $value['value'];
+          $v = trim($val);
+          if ( isset($value['kt::Property']) && ( substr($v,-1) != ';' ) ) {
+            $l = $value['kt::Property'] . ' = ';
+            $r = ';';
+          }  
+    		} else {
+    			$val = $value;
+    		}                       */
+        $val = trim( $val );
+        break;
+			default: {
+				throw new ktError( "Doesn't support the type#: {$type}",
+									"::ExportWrapJSON",
+									$this );
+			}
+		};
+		/*switch( $type ) {
+			case ktExport::EXPORT_WRAP:   
 				$l = "{\n";
 				$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
 				$r = "}";
 		  	break;
 			case ktExport::RESPONSE_WRAP:
 			case ktExport::METH_RESPONSE_WRAP:
-			case ktExport::PROP_RESPONSE_WRAP: 
+        
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:    
+        $val = trim( $val );
+        if ( ($p = strpos($val, ' = ')) > 0 ) {
+          $val = substr( $val, $p + 2, -1 );
+          $val = trim( $val ); 
+        } 
 			   break;
 			default: {
 				throw new ktError( "Doesn't support the type#: {$type}",
-									"::ExportWrapKT_XML",
+									"::ExportWrapJSONP",
 									$this );
 			}
-		};
+		};*/
 
 		header( 'Content-Type: application/javascript' );
 		$ret = $l . $val . $r . "\n";
@@ -1221,12 +1728,112 @@ class ktExport
 			echo $ret;
 			return true;
 		}
+	}        
+  
+	public static function ExportWrapKTO( $value, $type = ktExport::_DEFAULT_WRAP,
+												$return_export = false )
+	{
+		$l = ''; $val = ''; $r = '';
+
+		switch( $type ) {
+			case ktExport::EXPORT_WRAP:                     
+    		if (is_array( $value ) && isset($value['value']) ) {
+    			$val = $value['value'];
+    		} else {
+    			$val = $value;
+    		}
+				//$l = "{\n";
+				//$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
+				//$r = "}";
+		  	break;
+			case ktExport::RESPONSE_WRAP:
+			case ktExport::METH_RESPONSE_WRAP:                     
+    		$val = ktExport::ExportArrayKTO($value,true);                               
+        $val = trim( $val ) . "\n";
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:                     
+    		if (is_array( $value ) && isset($value['value']) ) {
+    			$val = $value['value'];
+    		} else {
+    			$val = $value;
+    		}                               
+        $val = trim( $val ) . "\n";
+        break;
+			default: {
+				throw new ktError( "Doesn't support the type#: {$type}",
+									"::ExportWrapJSON",
+									$this );
+			}
+		};
+
+		header( 'Content-Type: application/json' );
+		//$ret  = '<?   ?' . '>' . "\n";
+		$ret = $l . $val . $r . "\n";
+
+		if ($type == ktExport::RESPONSE_WRAP) {
+			$ret = str_replace( "\t\t", "\t", $ret );
+		}
+
+		if ($return_export) {
+			return $ret;
+		} else {
+			echo $ret;
+			return true;
+		}
+	}
+  
+	public static function ExportWrapPHP( $value, $type = ktExport::_DEFAULT_WRAP,
+												$return_export = false )
+	{
+		$l = ''; $r = '';                     
+		if (is_array( $value )) {
+			$val = isset($value['value']) ? $value['value'] : $value;
+		} else {
+			$val = $value;
+		}
+
+		switch( $type ) {
+			case ktExport::EXPORT_WRAP:
+				$l = "<?php\n";
+				$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
+				$r = '?' . '>';
+		  	break;
+			case ktExport::RESPONSE_WRAP:
+			case ktExport::METH_RESPONSE_WRAP:                                                   
+    		$val = ktExport::ExportArrayPHP($value,true);                               
+        $val = trim( $val ) . "\n";
+        break;
+			case ktExport::PROP_RESPONSE_WRAP:                               
+        $val = trim( $val ) . "\n";
+        break;
+			default: {
+				throw new ktError( "Doesn't support the type#: {$type}",
+									"::ExportWrapPHP",
+									$this );
+			}
+		};
+
+		//header( 'Content-Type: application/x-php' );
+    header( 'Content-Type: text/plain' );
+		//$ret  = '<?   ?' . '>' . "\n";
+		$ret = $l . $val . $r . "\n";
+
+		if ($type == ktExport::RESPONSE_WRAP) {
+			$ret = str_replace( "\t\t", "\t", $ret );
+		}
+
+		if ($return_export) {
+			return $ret;
+		} else {
+			echo $ret;
+			return true;
+		}
 	}
 
 	public static function ExportWrapKT_XML( $value, $type = ktExport::_DEFAULT_WRAP,
 												$return_export = false )
 	{
-		$l = ''; $r = '';
+		$l = ''; $val = ''; $r = '';
 
 		switch( $type ) {
 			case ktExport::EXPORT_WRAP:
@@ -1238,7 +1845,7 @@ class ktExport
 				$l = "<kto:export xmlns:kto=\"http://www.kachtus.net/xml/defs/kt/kto\">\n";
 				$val = "\t" . trim( str_replace( "\n", "\n\t", $val ) ) . "\n";
 				$r = "</kto:export>";
-			break;
+			  break;
 			case ktExport::RESPONSE_WRAP:
 			case ktExport::METH_RESPONSE_WRAP:
 			case ktExport::PROP_RESPONSE_WRAP:
@@ -1329,9 +1936,29 @@ class ktExport
 		}
 	}
 
+	public static function ExportWrapXML_RPC( $value, $type = ktExport::_DEFAULT_WRAP, $return_export = false )
+	{
+		$return = str_replace( '<kto:', '<', str_replace( '</kto:', '</',
+						str_replace( '</kto:array', '</list',
+						str_replace( '<kto:array', '<list',
+						str_replace( '<kto_custom:', '<',
+						str_replace( '</kto_custom:', '</',
+						str_replace( 'xmlns:kto', 'xmlns',
+							ktExport::ExportWrapKT_XML( $value, $type,
+													true )
+									) ) ) ) ) ) );
+
+		if ($return_export) {
+			return $return;
+		} else {
+			echo $return;
+			return true;
+		}
+	}
+
 	public function TreatType( $value, $type, $format = ktExport::_DEFAULT,
 						$propName = null )
-	{
+	{                     
 		switch ($type) {
 			case 'string': case 'ktString': {
 				if (($format == ktExport::KT_XML) ||
@@ -1347,7 +1974,9 @@ class ktExport
 					} else {
 						return '<string>' . $value. '</string>';
 					}
-				}
+				} else if ( ($format == ktExport::JSON) || ($format == ktExport::JSONP) ) {
+          return "'" . $value . "'";
+        }
 				return '"' . addslashes( $value ) . '"';
 			 }
 			case 'array': case 'ktArray': {
@@ -1396,6 +2025,18 @@ class ktExport
 			 }
 		};
 	}
+  
+  public function GetClass( $class )
+  {
+    if ( is_object( $class ) )
+      return ktExport::LookUp( get_class( $class ) );
+    else
+      return gettype( $class );    
+  }
+  public function LookUpClass( $class )
+  {
+      return kacTalk::$_kt->GetClassName( $class );    
+  }
 
 	public static function TranslateFormat( $format )
 	{
@@ -1428,7 +2069,7 @@ class ktExport
 				return ktExport::OBJECT_PHP;
 			}
 			case 'kto': case 'kts': case 'object_kt': {
-				return ktExport::OBJECT_KTS;
+				return ktExport::OBJECT_KTO;
 			}
 			default: {
 				return ktExport::_DEFAULT;
