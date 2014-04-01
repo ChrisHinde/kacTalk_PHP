@@ -25,9 +25,10 @@ class ktNet extends ktObject
 	public function __construct( )
 	{
 		parent::__construct(  );
-		throw new ktError( "You are not to create an object of this class!",
-							"::__construct",
-							$this );
+		throw ktError::E( 'Net->DontDoThis()',
+                      "You are not to create an object of this class!",
+                      "::__construct",
+                      $this );
 	}
 
 	public static function TranslateProtocol( $protocol, $include_sep = false )

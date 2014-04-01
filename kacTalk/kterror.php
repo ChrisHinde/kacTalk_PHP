@@ -17,6 +17,17 @@ class ktError extends Exception
 		$this->object	= $obj;
 		parent::__construct( $msg, $code );
 	}
+  
+  public static function E( $textError, $msg = '', $function = '', &$obj = null,
+				$code = ktError::DEFAULT_ERROR )
+  {
+    $te = $textError;
+    if ( is_array($textError) ) {
+      $te = join($textError,'->') . '()';
+    }
+    $m = $te . '| [' . $msg . ']';
+    return new ktError( $m, $function, $obj, $code );
+  }
 
 	public function __toString()
 	{
@@ -62,6 +73,8 @@ class ktError extends Exception
 	const CONSTANT		= 3013;
 	const UNKNOWN		  = 3014;
   const NOT_AVAILABLE = 3015;
+  const NOT_ALLOWED = 3016;
+  const WRONG_KEY = 3017;
 
 	const REGEX_COULDNT_SET_PATTERN = 3030;
 

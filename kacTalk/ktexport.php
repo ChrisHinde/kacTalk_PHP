@@ -19,8 +19,8 @@ class ktExport
 	const OBJECT_KTO	= 31427;			// -   -
 	const OBJECT_PHP	= 31428;			// -   -
 	const OBJECT_JS		= ktExport::JSON;	// -   x (*)
-	const _VAR_DUMP    = 31429;				// 0   x
-	//const NONE			= 31426;
+	const _VAR_DUMP   = 31429;				// 0   x
+	const NONE		   	= 31430;
 	const _DEFAULT		= ktExport::KT_XML; //ktExport::KT_XML;
 
 	const EXPORT_WRAP			= 16180;
@@ -103,9 +103,11 @@ class ktExport
 				break;
 			 }
 			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+				throw ktError::E( 'Export->FormatNotSupported(' . ktError::$_formatString . ",#{$format})",
+                  "Doesn't support the format: {ktExport::$_formatString}",
 									"::Export",
-									$this );
+									$this,
+                  ktError::NOTIMP );
 			}
 		}
 
@@ -164,8 +166,9 @@ class ktExport
 				$ret = $this->ExportVarDump( $return_export );
 				break;
 			 }
-			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+			default: {                                            
+				throw ktError::E( 'Export->FormatNotSupported(' . ktExport::$_formatString . ",#{$format})",
+                  "Doesn't support the format: {ktExport::$_formatString}",
 									"::Export",
 									$this );
 			}
@@ -1073,7 +1076,8 @@ class ktExport
 				break;
 			 }
 			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+				throw ktError::E( 'Export->FormatNotSupported(' . ktExport::$_formatString . ",#{$format})",
+                  "Doesn't support the format: " . ktExport::$_formatString,
 									"::ExportArray",
 									$this );
 			}
@@ -1574,7 +1578,8 @@ class ktExport
 				break;
 			 }
 			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+				throw ktError::E( 'Export->FormatNotSupported(' . ktExport::$_formatString . ",#{$format})",
+                  "Doesn't support the format: {ktExport::$_formatString}",
 									"::ExportWrap",
 									$this );
 			}
@@ -1613,7 +1618,8 @@ class ktExport
         $val = trim( $val );
         break;
 			default: {
-				throw new ktError( "Doesn't support the type#: {$type}",
+				throw ktError::E( 'Export->TypeNotSupported(' . "#{$type})",
+                  "Doesn't support the type#: {$type}",
 									"::ExportWrapJSON",
 									$this );
 			}
@@ -1680,7 +1686,8 @@ class ktExport
         $val = trim( $val );
         break;
 			default: {
-				throw new ktError( "Doesn't support the type#: {$type}",
+				throw ktError::E( 'Export->TypeNotSupported(' . "#{$type})",
+                  "Doesn't support the type#: {$type}",
 									"::ExportWrapJSON",
 									$this );
 			}
@@ -1760,7 +1767,8 @@ class ktExport
         $val = trim( $val ) . "\n";
         break;
 			default: {
-				throw new ktError( "Doesn't support the type#: {$type}",
+				throw ktError::E( 'ExportKTO->TypeNotSupported(' . ",#{$type})",
+                  "Doesn't support the type#: {$type}",
 									"::ExportWrapJSON",
 									$this );
 			}
@@ -1807,7 +1815,8 @@ class ktExport
         $val = trim( $val ) . "\n";
         break;
 			default: {
-				throw new ktError( "Doesn't support the type#: {$type}",
+				throw ktError::E( 'Export->TypeNotSupported(' . ",#{$type})",
+                  "Doesn't support the type#: {$type}",
 									"::ExportWrapPHP",
 									$this );
 			}
@@ -1896,7 +1905,8 @@ class ktExport
 				$r .= "</kto:response>";
 			break;
 			default: {
-				throw new ktError( "Doesn't support the type#: {$type}",
+				throw ktError::E( 'Export->TypeNotSupported(' . ",#{$type})",
+                  "Doesn't support the type#: {$type}",
 									"::ExportWrapKT_XML",
 									$this );
 			}
@@ -2040,43 +2050,61 @@ class ktExport
 
 	public static function TranslateFormat( $format )
 	{
-		switch( strtolower( $format ) ) {
+    $format = strtolower($format);
+		switch( $format ) {
 			case 'kt': case 'kt_xml': case 'ktxml': {
+        ktExport::$_formatString = 'KT_XML';
 				return ktExport::KT_XML;
 			}
-			case 'xml': {
+			case 'xml': {                            
+        ktExport::$_formatString = 'XML';
 				return ktExport::XML;
 			}
 			case 'xml_rpc': case 'rpc': {
+        ktExport::$_formatString = 'RPC';
 				return ktExport::XML_RPC;
 			}
-			case 'json': {
+			case 'json': {                  
+        ktExport::$_formatString = 'JSON';
 				return ktExport::JSON;
 			}
-			case 'jsonp': {
+			case 'jsonp': {                  
+        ktExport::$_formatString = 'JSONP';
 				return ktExport::JSONP;
 			}
-			case 'ini': {
+			case 'ini': {                     
+        ktExport::$_formatString = 'INI';
 				return ktExport::INI;
 			}
 			case 'conf': case 'aconf': case 'apache_conf': {
+        ktExport::$_formatString = 'ACONF';
 				return ktExport::APACHE_CONF;
 			}
-			case 'js': case 'object_js': {
+			case 'js': case 'object_js': {    
+        ktExport::$_formatString = 'OBJECT_JS';
 				return ktExport::OBJECT_JS;
 			}
-			case 'php': case 'object_php': {
+			case 'php': case 'object_php': {      
+        ktExport::$_formatString = 'PHP';
 				return ktExport::OBJECT_PHP;
 			}
 			case 'kto': case 'kts': case 'object_kt': {
+        ktExport::$_formatString = 'KTO';
 				return ktExport::OBJECT_KTO;
 			}
-			default: {
+			case '': case 'def': case 'default': case '_def': case '_default': case '_': {
+        ktExport::$_formatString = $format;
 				return ktExport::_DEFAULT;
+			}
+			default: {                     
+        ktExport::$_formatString = $format;
+				return ktExport::NONE;                                              
 			}
 		};
 	}
 
+  
+  public static $_formatString = 'KT';
 	private $_obj = null;
 };
 

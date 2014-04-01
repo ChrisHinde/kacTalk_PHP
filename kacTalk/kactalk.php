@@ -71,7 +71,7 @@ class kacTalk
   {
     if ( empty($this->_apiKey) )
       return true;
-
+                                                         
     if ( empty($apiKey) ) {
       if ( isset( $_REQUEST['api_key'] ) )
         $apiKey = $_REQUEST['api_key'];
@@ -87,11 +87,11 @@ class kacTalk
   {
     if ( empty($msg) )
       $msg = 'The given API-key wasn\'t correct!';
-    
+                                                         
     if ( $this->CheckAPIKey( $apiKey ) )
       return true;
     else
-      die($msg);
+     throw ktError::E( 'CheckAPIKey->WrongKey()', $msg, '::CheckAPIKey', $this, ktError::WRONG_KEY ); //die($msg);
   }
 
 	public function Register( &$object, $name = '' )
@@ -168,7 +168,7 @@ class kacTalk
 				return $this->CallHTTP( $host, $uri, $index );
 			break;
 			default: {
-				throw new ktError( "Doesn't support the protocol#: {$protocol}",
+				throw ktError::E( 'Call->ProtocolNotSupported()', "Doesn't support the protocol#: {$protocol}",
 									"::Call",
 									$this,
                   ktError::NOTIMP );
@@ -218,7 +218,7 @@ class kacTalk
 		//$res = @file_get_contents( $url );
 
 		if (!($stream = @fopen( $url, 'r' ))) {
-			throw new ktError( "Couldn't open the url {$url}",
+			throw ktError::E( 'CallHTTP->CouldNotOpenURL()', "Couldn't open the url {$url}",
 								"::CallHTTP",
 								$this );
 		}
@@ -321,7 +321,7 @@ class kacTalk
 
 		$obj = $this->GetObject( $obj_n );
     if ( is_null( $obj ) ) {
-      throw new ktError("UnavailableObject({$obj_n}) [The object '{$obj_n}' doesn't exist!]",'::Parse',$this,ktError::_404);
+      throw ktError::E( "GetObject->UnavailableObject({$obj_n})", "The object '{$obj_n}' doesn't exist!",'::Parse',$this,ktError::_404);
     }
 
 		if (!empty( $path_arr['member'] )) {
@@ -335,7 +335,7 @@ class kacTalk
           $ref = new ReflectionProperty(get_class($obj),$mem_n);
         } catch ( ReflectionException $e ) {}        
         if ( ( $ref != null ) && ! $ref->isPublic() )
-          throw new ktError("UnavailableProperty({$obj_n}::{$mem_n}) [The property '{$mem_n}' of '{$obj_n}' isn't publicily available!]",'::Parse',$this,ktError::NOT_AVAILABLE);
+          throw ktError::E("GetProperty->UnavailableProperty({$obj_n}::{$mem_n})", "The property '{$mem_n}' of '{$obj_n}' isn't publicily available!",'::Parse',$this,ktError::NOT_AVAILABLE);
         
 				$mem = $obj->{$mem_n};
 				$this->SetCurrentObject( $mem );
@@ -357,12 +357,17 @@ class kacTalk
 				}
 				$this->PopCurrentObject();
 			} else {
-				$wrap_type = ktExport::PROP_RESPONSE_WRAP;
+        throw ktError::E( 'KacTalk->MemberDoesNotExist(' . $obj_n . '::' . $mem_n . ')',
+                          "The object '{$obj_n}' doesn't have a member called '{$mem_n}'!",
+                          '::Parse',
+                          $this,
+                          ktERROR::_404 );
+				/*$wrap_type = ktExport::PROP_RESPONSE_WRAP;
 				$ret = ktExport::ExportStatic( null, $format,
 												true, false, $mem_n );
 				$ret = ktExport::ExportWrap( array( 'value' => $ret,
 											'kt::IS_PROPERTY' => true,
-											'kt::Property' => $mem_n ), $format, $wrap_type );
+											'kt::Property' => $mem_n ), $format, $wrap_type );*/
 			}
 		} else {
 			$reto = $obj;
@@ -499,5 +504,7 @@ class kacTalk
   protected $object = null;
 	protected $_object_stack = array();
   
+  
+  public static $_path = '';
   public static $_kt = null;
 };

@@ -52,14 +52,14 @@ class ktImport
 {
 	const KT_XML		= 31420;			// -   x  (??)
 	const JSON			= 31421;			// -   x  (?)
-	const XML			= 31422;			// -   x
+	const XML			  = 31422;			// -   x
 	const XML_RPC		= 31423;			// -   -
 	const APACHE_CONF	= 31424;			// -   -
-	const INI			= 31425;			// -   -
+	const INI	     		= 31425;			// -   -
 	const OBJECT_KTS	= 31426;			// -   -
 	const OBJECT_PHP	= 31427;			// -   -
 	const OBJECT_JS		= ktImport::JSON;	// -   x (*)
-	const _AUTO			= 31428;
+	const _AUTO	   		= 31428;
 	const _DEFAULT		= ktImport::KT_XML;
 
 	public $object;
@@ -110,7 +110,8 @@ class ktImport
 				$this->object = $this->ImportKT_XML( );
 			break;
 			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+				throw ktError::E( 'Import->FormatNotSupported(' . ",#{$type})",
+                  "Doesn't support the format#: {$format}",
 									"::Import",
 									$this );
 			}
@@ -130,7 +131,8 @@ class ktImport
 				return $this->ImportKT_XML_Export( );
 			break;
 			default: {
-				throw new ktError( "Doesn't support the format#: {$format}",
+				throw ktError::E( 'Import->FormatNotSupported(' . ",#{$type})",
+                  "Doesn't support the format#: {$format}",
 									"::Import_Export",
 									$this );
 			}
@@ -503,4 +505,6 @@ class ktImport
 			}
 		};
 	}
+  
+  public static $_formatString = 'KT';
 }
