@@ -6,68 +6,74 @@ header( 'Content-Type: text/plain' );
 
 include "kacTalk/kactalk.php";
 
-
-class testKTO extends ktObject
+/**
+ * A collection of Math functions that we want to expose to the world
+ */ 
+class MathFunctions extends ktObject
 {
-	public $slu = 42;
-	public $pi = 3.142;
-  public $string = 'Hello World!';
-	public $booleskt = true;
-	public $TT = null;
-
-	function dummy( $str = 'What?' )
-	{
-		echo 'The dummy says: ' . $str . "\n";
-	}
-
-	function add( $a = 1, $b = 2 )
-	{
-		return intval( $a ) + intval( $b );
-	}
-	function mult( $a = 1, $b = 2 )
-	{
-		return floatval( $a ) * floatval( $b );
-	}
-
-	function printa( )
-	{
-		$args = func_get_args();
-		$n = 1;
-
-		foreach ($args as $a) {
-      if ( $n > 1 ) echo "\n";
-			$n_s = (($n > 9) ? '0' : ''). $n;
-			echo $n_s . ": {$a}";
-
-			$n++;
-		}
-
-		return $n - 1;
-	}
+  public $pi = 3.1421;
+  
+  function fractal( $n = 3 )
+  {
+    if ( $n > 42 ) {
+      throw ktError::E('Math->TooHighFractal(' . $n . ')',
+                        'Whoa! Let\'s draw the line at (42!)!',
+      									"::Fractal",
+      									$this,
+                        ktError::NOT_ALLOWED );
+    } else if ( $n <= 0 )
+      return 1;
+    
+    return $this->fractal( $n - 1 )*$n;
+  }
 };
 
-class TestTwo extends ktObject
+class Test extends ktObject
 {
-	public $list = array( 42, 'slu' );
-	public $emptyL = null;
+	public $list = array( 'foo', 'bar', 1, 2 );
+	public $myChild = null;
 	public $map = null;
-	private $secret = 3.142;
+	private $secret = 'This property isn\'t accesible!';
 
 	public function __construct()
-	{
-		$this->map = array( 'first' => 'a', '2nd' => 2 );
+	{                                 
+		$this->map = array( 'first' => 'one', 'second' => 2 );
+    $this->myChild = new Child();
 	}
 
-	public function add( $in )
+	public function Remember( $in )
 	{
-		if (!is_array( $this->emptyL )) {
-			$this->emptyL = array();
-		}
-
-		$this->emptyL[] = $in;
-
-		return count( $this->emptyL );
+		session_start();              
+    if ( !isset( $_SESSION['remember'] ) )
+      $_SESSION['remember'] = $in;
+    else
+      $_SESSION['remember'] .= ';' . $in;
+      
+    return $_SESSION['remember'];
 	}
+  
+  public function Arguments()
+  {
+    $arguments = func_get_args();
+    $n = 0;
+    
+    foreach ( $arguments as $i => $argument ) {
+      echo $i . ': ' . $argument . "\n";
+      $n++;
+    }
+    
+    return $n;
+  }
+};
+
+class Child
+{
+  function Path()
+  {
+    return kacTalk::$_path;
+  } 
+  
+  public $parent = null;
 };
 
 
@@ -75,12 +81,12 @@ try {
   $kt = new kacTalk();
   $kt->SetAPIKey('658B8C89-BA37-42D6-8D02-7119A5FA613A');
 
-  $kto = new testKTO();
-	$kt->RegisterClass( 'testKTO', "kto" );
-	$my2 = new testTwo();
-	$my2->kt0 = $kto;
-	$kt->Register( $my2, "my2nd" );
-//var_dump( $kto );
+  $kt->RegisterClass( 'MathFunctions', "math" );
+	$test = new Test();
+	$test->secondChild = new Child();
+	$kt->Register( $test, "test" );
+  
+  
 	if (_DEBUG) {
 		var_dump( $kt );
 		echo "==============================\n";
@@ -92,8 +98,9 @@ try {
 
 	if (_DEBUG) { echo "==============================\n"; }
 } catch ( Exception $err ) {
-    echo 'Caught exception: (#' . $err->getCode() . ') ' .  $err . "\n";
-	echo $err->getTraceAsString();
+  echo $err . ' (ERR#' . $err->getCode() . ')';
+   // echo 'Caught exception: (#' . $err->getCode() . ') ' .  $err . "\n";
+	//echo $err->getTraceAsString();
 }
 
 //echo "NULL";
