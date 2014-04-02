@@ -585,6 +585,18 @@ class ktExport
 						$return .= "\n\t";
 					}
 					$return .= "</kto:value>";
+				} else if (is_object( $value )) {
+					$return .= "\t<kto:value {$propName_a}type=\"ktObject\">";
+					if ($value == $this->_obj) {
+						$return .= 'this';
+					} else {
+						$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+							trim( ktExport::ExportStatic( $value, ktExport::KT_XML,
+                                            $return_export, $no_outer,
+                                            $_name, $_type ) ) );
+						$return .= "\n\t";
+					}
+					$return .= "</kto:value>";
 				} else {
 					$t = 'kto_custom:' . ktExport::LookUpClass( $value );
 					$return .= "\t<kto:value {$propName_a}type=\"{$t}\"><![CDATA[{$value}]]></kto:value>";
@@ -644,6 +656,16 @@ class ktExport
 			$return .= "</kto:value>";
 		} else if (is_a( $value, 'ktObject' ) || @is_subclass_of( $value, 'ktObject' )) {
 			$return .= "\t<kto:value {$name_a}type=\"ktObject\">";
+			if ($value == $this->_obj) {
+				$return .= 'this';
+			} else {
+				$return .= "\n\t\t" . str_replace( "\n", "\n\t\t",
+					trim( $value->Export( ktExport::KT_XML, true, true ) ) );
+				$return .= "\n\t";
+			}
+			$return .= "</kto:value>";
+		} else if (is_object( $value )) {
+			$return .= "\t<kto:value {$name_a}type=\"object\">";
 			if ($value == $this->_obj) {
 				$return .= 'this';
 			} else {
@@ -2046,7 +2068,7 @@ class ktExport
   public function LookUpClass( $class )
   {
       return kacTalk::$_kt->GetClassName( $class );    
-  }
+  }              
 
 	public static function TranslateFormat( $format )
 	{
@@ -2105,7 +2127,9 @@ class ktExport
 
   
   public static $_formatString = 'KT';
-	private $_obj = null;
+	protected $_obj = null;
+  
+  protected $_parent = null;
 };
 
 ?>
