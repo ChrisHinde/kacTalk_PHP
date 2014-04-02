@@ -152,13 +152,15 @@ class kacTalk
 		}
 	}
   public function GetClassName( $class )
-  {
-  if ( is_numeric($class) ) throw new Exception('NO');
-    if (array_key_exists( $class, $this->_objects ) )
-      return $class;
-    else if ( ($c = array_search( $class, $this->_objects )) !== false ) {
+  { 
+    if ( is_numeric($class) ) throw new Exception('NO');
+    
+    if ( ($c = array_search( $class, $this->_objects )) !== false ) {
       return $c;
-    }  
+    } else if (ktLib::IsInArray($this->_objects, $class)) {
+      return $class;
+    }
+    return '';  
   }
 
 	public function Call( $host, $uri, $index = '', $protocol = kacTalk::_DEFAULT_PROT )
@@ -463,6 +465,10 @@ class kacTalk
 		$this->object = array_pop( $this->_object_stack );
 		return $this->object;
 	}
+  public function IsInStack( &$obj )
+  {
+    return ktLib::IsInArray( $this->_object_stack, $obj );
+  }
 
 	public function __toString()
 	{
