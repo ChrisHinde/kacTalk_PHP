@@ -17,17 +17,28 @@ class ktLib
   {
       return array_keys($arr) !== range(0, count($arr) - 1);
   }
+  static function IsInArray( &$array, &$subject )
+  {
+    foreach ( $array as $obj ) {
+      if ( $obj == $subject ) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
 
 	static function GetRoute( $path )
 	{
 		$ret = array('format'=>'','member'=>'','object'=>'');
 
 		if (empty( $path )) {
-			$path = $_SERVER['PATH_INFO'];
+			$path = ( isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : ( isset($_REQUEST['kuery']) ? $_REQUEST['kuery'] : '/' ) ) ;
 		}
 		while ($path[0] == '/') {
 			$path = substr( $path, 1 );
 		}
+    kacTalk::$_path = $path;
 
 		$s1 = split( "/", $path );
 
