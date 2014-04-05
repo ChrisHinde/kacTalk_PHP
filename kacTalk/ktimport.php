@@ -2,10 +2,11 @@
 /**
  * @package Kachtus Talk Objects (Kachtus Object Format/XML)
  * @version v0.1b
- * @copyright Christopher Hindefjord - Mr_CHISOL - Kachtus 2008
+ * @copyright Christopher Hindefjord - 2014
  * @license CC-GNU GPL v2
  */
-defined( '_KACTALK_VALID' ) or die( 'Restricted Access!' );
+
+ defined( '_KACTALK_VALID' ) or die( 'Restricted Access!' );
 
 require_once( 'ktxml.php' );
 
