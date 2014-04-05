@@ -2,15 +2,15 @@
 /**
  * @package Kachtus Talk Objects (Kachtus Object Format/XML)
  * @version v0.1b
- * @copyright Christopher Hindefjord - Mr_CHISOL - Kachtus 2008
+ * @copyright Christopher Hindefjord - 2014
  * @license CC-GNU GPL v2
  */
 
 define( '_KACTALK_VALID', 1 );
 
 define( '_KACTALK_NAME', 'kacTalk' );
-define( '_KACTALK_VERSION', 'v0.1b' );
-define( '_KACTALK_VERSION_F', 0.101 );
+define( '_KACTALK_VERSION', 'v0.1a' );
+define( '_KACTALK_VERSION_F', 0.102 );
 define( '_KACTALK_AUTHOR', "Christopher Hindefjord (2014)" );
 define( '_KACTALK_LONG_NAME', 'Kachtus KacTalk (PHP)' );
 define( '_KACTALK_LONG_NAME_VERSION', _KACTALK_LONG_NAME . ' ' . _KACTALK_VERSION );
@@ -154,11 +154,14 @@ class kacTalk
   public function GetClassName( $class )
   { 
     if ( is_numeric($class) ) throw new Exception('NO');
-    
-    if ( ($c = array_search( $class, $this->_objects )) !== false ) {
+    $c = '';
+               
+    if (ktLib::IsInArray($this->_objects, $class, $c)) {
       return $c;
-    } else if (ktLib::IsInArray($this->_objects, $class)) {
-      return $class;
+    } else if ( is_object( $class ) ) {
+      return get_class( $class );
+    } else if ( ($c = array_search( strtolower($class), $this->_objects )) !== false ) {
+      return $c;
     }
     return '';  
   }
