@@ -2,9 +2,10 @@
 /**
  * @package Kachtus Talk Objects (Kachtus Object Format/XML)
  * @version v0.1b
- * @copyright Christopher Hindefjord - Mr_CHISOL - Kachtus 2008
+ * @copyright Christopher Hindefjord - 2014
  * @license CC-GNU GPL v2
  */
+
 defined( '_KACTALK_VALID' ) or die( 'Restricted Access!' );
 
 class ktLib
@@ -17,10 +18,11 @@ class ktLib
   {
       return array_keys($arr) !== range(0, count($arr) - 1);
   }
-  static function IsInArray( &$array, &$subject )
+  static function IsInArray( &$array, &$subject, &$c = '' )
   {
-    foreach ( $array as $obj ) {
+    foreach ( $array as $k => $obj ) {
       if ( $obj == $subject ) {
+        $c = $k;
         return true;
       }
     }
