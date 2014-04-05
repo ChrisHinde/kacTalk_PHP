@@ -33,12 +33,14 @@ class Test extends ktObject
 	public $list = array( 'foo', 'bar', 1, 2 );
 	public $myChild = null;
 	public $map = null;
+	public $me = null;
 	private $secret = 'This property isn\'t accesible!';
 
 	public function __construct()
 	{                                 
 		$this->map = array( 'first' => 'one', 'second' => 2 );
-    $this->myChild = new Child();
+    $this->myChild = new Child($this);
+    $this->me = $this;
 	}
 
 	public function Remember( $in )
@@ -68,7 +70,11 @@ class Test extends ktObject
 
 class Child
 {
-  function Path()
+  public function __construct( &$parent )
+  {
+    $this->parent = $parent;
+  }
+  public function Path()
   {
     return kacTalk::$_path;
   } 
@@ -83,7 +89,7 @@ try {
 
   $kt->RegisterClass( 'MathFunctions', "math" );
 	$test = new Test();
-	$test->secondChild = new Child();
+	$test->secondChild = new Child($test);
 	$kt->Register( $test, "test" );
   
   
