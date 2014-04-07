@@ -2,9 +2,10 @@
 /**
  * @package Kachtus Talk Objects (Kachtus Object Format/XML)
  * @version v0.1b
- * @copyright Christopher Hindefjord - Mr_CHISOL - Kachtus 2008
+ * @copyright Christopher Hindefjord - 2014
  * @license CC-GNU GPL v2
  */
+
 defined( '_KACTALK_VALID' ) or die( 'Restricted Access!' );
 
 include_once( 'ktexport.php' );
@@ -72,9 +73,7 @@ class ktObject /*extends ArrayObject*/
 	function Export( $format = ktExport::_DEFAULT, $return = true,
 						$no_outer = false )
 	{
-		$kte = new ktExport( $this );
-
-		return $kte->Export( $format, $return, $no_outer );
+		return ktExport::ExportStatic( $this, $format, $return, $no_outer );
 	}
 
 	public $_object_name = 'ktObject';

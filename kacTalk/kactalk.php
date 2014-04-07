@@ -367,21 +367,14 @@ class kacTalk
                           '::Parse',
                           $this,
                           ktERROR::_404 );
-				/*$wrap_type = ktExport::PROP_RESPONSE_WRAP;
-				$ret = ktExport::ExportStatic( null, $format,
-												true, false, $mem_n );
-				$ret = ktExport::ExportWrap( array( 'value' => $ret,
-											'kt::IS_PROPERTY' => true,
-											'kt::Property' => $mem_n ), $format, $wrap_type );*/
 			}
 		} else {
 			$reto = $obj;
 		}
-    
-    //if ( $reto == null )
 
 		if (empty( $ret )) {
-			$ret = ktExport::ExportStatic( $reto, $format, true, false, $mem_n );
+			$ret = ktExport::ExportStatic( $reto, $format, true, false,
+																			$mem_n, '', true );
 			$ret = ktExport::ExportWrap( $ret, $format, $wrap_type );
 		}
 
